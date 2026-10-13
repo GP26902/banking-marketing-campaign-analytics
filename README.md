@@ -43,7 +43,7 @@ This project helps marketing stakeholders answer practical questions about a ban
 | **Dataset integration** | Automatically loads and parses the UCI Bank Marketing dataset (`data/train.csv`) using semicolon delimiters (`sep=";"`). |
 | **5 dynamic filters** | Sidebar filters for **Occupation/Job**, **Age Group** (auto-binned from raw age), **Education Level**, **Contact Method**, and **Previous Outcome**. |
 | **Live KPI cards** | Filtered Customer Count, Average Account Balance ($), and Campaign Conversion Rate (%). |
-| **Interactive visualizations** | Multi-tab panels covering demographic segmentation, job-sector balances, and campaign-specific characteristics. |
+| **Interactive visualizations** | Three tabs: demographics and balances, campaign characteristics (EDA), and response rates by customer characteristics. |
 | **Raw data explorer** | Expandable table to inspect the underlying filtered data. |
 
 ---
@@ -92,6 +92,14 @@ Segment Conversion = (Subscribed Clients in Segment / Total Contacts in Segment)
 - **Past success matters.** Clients with a previously successful campaign subscribe at a dramatically higher rate than cold contacts.
 - **Cellular dominates.** Cellular contacts account for most engagement and convert better than landlines.
 - **Diminishing returns.** Conversions concentrate in the first 1–4 contact attempts; 10+ attempts show steep drop-off and are operational outliers.
+
+### Response Rates by Customer Characteristics
+
+The **📊 Response Rates by Customer** tab shows response rates by age group, occupation, education level and marital status. Each chart marks the overall rate with a dashed line and responds to the sidebar filters.
+
+- **Highest-response groups:** customers aged 65+ (42.10%), students (28.68%) and retirees (22.79%), compared with an overall rate of 11.70%.
+- **Lowest-response groups:** ages 35-49 (9.62%) and blue-collar workers (7.27%).
+- **Caution:** the highest-response age groups have only about 800 customers each, so treat their rates with care.
 
 ---
 

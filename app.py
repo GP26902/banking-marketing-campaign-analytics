@@ -31,7 +31,7 @@ def load_banking_data():
     # Preprocess Age into Age Groups to satisfy age filtering requirements
     if "age" in df.columns:
         bins = [0, 25, 35, 50, 65, 120]
-        labels = ["<25", "25-35", "36-50", "51-65", "65+"]
+        labels = ["<25", "25-34", "35-49", "50-64", "65+"]
         df["age_group"] = pd.cut(df["age"], bins=bins, labels=labels, right=False)
 
     return df
@@ -46,6 +46,42 @@ def summarize_by(data, group_col, success_col):
         summary["Conversions"] = grouped["converted"].sum().astype(int)
         summary["Conversion Rate (%)"] = (summary["Conversions"] / summary["Contacts"] * 100).round(2)
     return summary.sort_values("Contacts", ascending=False)
+
+
+def plot_response_rate(data, group_col, axis_label, overall_rate, success_col, sort_by_rate=True, horizontal=False):
+    """Bar chart of the response (conversion) rate for each category of `group_col`.
+
+    A dashed reference line marks the overall rate of the currently filtered data.
+    Set sort_by_rate=False to keep a natural category order (e.g. age groups).
+    """
+    summary = summarize_by(data, group_col, success_col).reset_index()
+    if sort_by_rate:
+        # Horizontal bars are drawn bottom-to-top, so sort ascending to put the highest rate on top
+        summary = summary.sort_values("Conversion Rate (%)", ascending=horizontal)
+    else:
+        summary = summary.sort_values(group_col)
+
+    fig = px.bar(
+        summary,
+        x="Conversion Rate (%)" if horizontal else group_col,
+        y=group_col if horizontal else "Conversion Rate (%)",
+        orientation="h" if horizontal else "v",
+        color=group_col,
+        text="Conversion Rate (%)",
+        hover_data=["Contacts", "Conversions"],
+        template=PLOT_TEMPLATE,
+    )
+    fig.update_traces(texttemplate="%{text:.2f}%", textposition="outside", cliponaxis=False)
+
+    label = f"Overall: {overall_rate:.2f}%"
+    if horizontal:
+        fig.add_vline(x=overall_rate, line_dash="dash", line_color="white", annotation_text=label, annotation_position="top")
+        fig.update_layout(xaxis_title="Response Rate (%)", yaxis_title=axis_label)
+    else:
+        fig.add_hline(y=overall_rate, line_dash="dash", line_color="white", annotation_text=label, annotation_position="top left")
+        fig.update_layout(xaxis_title=axis_label, yaxis_title="Response Rate (%)")
+    fig.update_layout(showlegend=False)
+    return fig
 
 
 try:
@@ -118,7 +154,13 @@ try:
         )
 
     # 5. Tabbed Layout
-    tab_demo, tab_campaign = st.tabs(["👥 Demographics & Balances", "📞 Campaign Characteristics (EDA)"])
+    tab_demo, tab_campaign, tab_response = st.tabs(
+        [
+            "👥 Demographics & Balances",
+            "📞 Campaign Characteristics (EDA)",
+            "📊 Response Rates by Customer",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # TAB 1: Existing visualizations (unchanged)
@@ -350,6 +392,46 @@ try:
 
             for item in insights:
                 st.markdown(f"- {item}")
+
+    # ------------------------------------------------------------------
+    # TAB 3: Response rates broken down by customer characteristics
+    # ------------------------------------------------------------------
+    with tab_response:
+        st.markdown(
+            "Response (term-deposit subscription) rates by **age group**, **occupation**, "
+            "**education level** and **marital status**. All charts respond to the sidebar filters. "
+            "The dashed line marks the overall response rate for the currently filtered customers."
+        )
+
+        if total_customers == 0:
+            st.warning("No records match the current filters. Adjust the sidebar filters to see the charts.")
+        elif not success_col:
+            st.info("Outcome column unavailable, so response rates cannot be calculated.")
+        else:
+            # (chart title, column, axis label, sort by rate?, horizontal bars?)
+            response_charts = [
+                ("1. Response Rate by Age Group", "age_group", "Age Group", False, False),
+                ("2. Response Rate by Occupation", "job", "Occupation", True, True),
+                ("3. Response Rate by Education Level", "education", "Education Level", True, False),
+                ("4. Response Rate by Marital Status", "marital", "Marital Status", True, False),
+            ]
+
+            chart_cols = st.columns(2)
+            for i, (title, column, axis_label, sort_by_rate, horizontal) in enumerate(response_charts):
+                with chart_cols[i % 2]:
+                    st.markdown(f"**{title}**")
+                    if column in filtered_df.columns:
+                        fig_rate = plot_response_rate(
+                            filtered_df, column, axis_label, success_rate, success_col, sort_by_rate, horizontal
+                        )
+                        st.plotly_chart(fig_rate, use_container_width=True)
+                    else:
+                        st.info(f"'{column}' column unavailable.")
+
+            st.caption(
+                "Hover over a bar to see the number of contacts and conversions behind each rate. "
+                "Groups with very few customers can give unstable rates, so check the Contacts value."
+            )
 
     # 6. Data Preview Section
     with st.expander("📂 View Raw Filtered Data Table"):
