@@ -44,6 +44,7 @@ This project helps marketing stakeholders answer practical questions about a ban
 | **5 dynamic filters** | Sidebar filters for **Occupation/Job**, **Age Group** (auto-binned from raw age), **Education Level**, **Contact Method**, and **Previous Outcome**. |
 | **Live KPI cards** | Filtered Customer Count, Average Account Balance ($), and Campaign Conversion Rate (%). |
 | **Interactive visualizations** | Three tabs: demographics and balances, campaign characteristics (EDA), and response rates by customer characteristics. |
+| **Customer segmentation** | A fourth tab combines any two of six characteristics into a response-rate heatmap, with an adjustable minimum segment size and ranked top/bottom 10 segments. |
 | **Raw data explorer** | Expandable table to inspect the underlying filtered data. |
 
 ---
