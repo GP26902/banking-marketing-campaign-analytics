@@ -1,6 +1,8 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import numpy as np
+import plotly.graph_objects as go
 
 # 1. Page Configuration (Wide Layout)
 st.set_page_config(
@@ -46,6 +48,83 @@ def summarize_by(data, group_col, success_col):
         summary["Conversions"] = grouped["converted"].sum().astype(int)
         summary["Conversion Rate (%)"] = (summary["Conversions"] / summary["Contacts"] * 100).round(2)
     return summary.sort_values("Contacts", ascending=False)
+
+
+SEGMENT_DIMENSIONS = {
+    "Age group": "age_group",
+    "Job": "job",
+    "Education": "education",
+    "Marital status": "marital",
+    "Contact method": "contact",
+    "Previous outcome": "poutcome",
+}
+
+
+def category_order(data, col):
+    """Keep age groups in their natural order; sort other categories alphabetically."""
+    present = set(data[col].dropna().unique())
+    if isinstance(data[col].dtype, pd.CategoricalDtype):
+        return [c for c in data[col].cat.categories if c in present]
+    return sorted(present)
+
+
+def segment_summary(data, row_col, col_col):
+    """Contacts, conversions and response rate for every row x column combination."""
+    seg = (
+        data.groupby([row_col, col_col], observed=True)
+        .agg(Contacts=("converted", "size"), Conversions=("converted", "sum"))
+        .reset_index()
+    )
+    seg["Rate (%)"] = (seg["Conversions"] / seg["Contacts"] * 100).round(2)
+    return seg
+
+
+def build_segment_heatmap(seg, row_col, col_col, rows, cols, min_size, row_label, col_label):
+    """Heatmap of response rate. Cells under min_size are drawn grey."""
+    def grid(value):
+        return seg.pivot(index=row_col, columns=col_col, values=value).reindex(index=rows, columns=cols)
+
+    contacts = grid("Contacts").fillna(0)
+    conversions = grid("Conversions").fillna(0)
+    rate = grid("Rate (%)")
+    too_small = contacts < min_size
+
+    colored = rate.where(~too_small)
+    grey = pd.DataFrame(np.where(too_small, 1.0, np.nan), index=rows, columns=cols)
+    details = np.dstack([contacts.values, conversions.values])
+
+    fig = go.Figure()
+    # Layer 1: grey cells for segments below the minimum size
+    fig.add_trace(go.Heatmap(
+        z=grey.values, x=cols, y=rows, customdata=details,
+        colorscale=[[0, "#4a4a4a"], [1, "#4a4a4a"]], showscale=False,
+        hovertemplate=(f"{row_label}: %{{y}}<br>{col_label}: %{{x}}<br>"
+                       "Contacts: %{customdata[0]:,.0f}<br>"
+                       "<i>Below minimum segment size</i><extra></extra>"),
+    ))
+    # Layer 2: colored response-rate cells
+    fig.add_trace(go.Heatmap(
+        z=colored.values, x=cols, y=rows, customdata=details,
+        colorscale="Viridis", colorbar=dict(title="Response rate (%)"),
+        texttemplate="%{z:.1f}",
+        hovertemplate=(f"{row_label}: %{{y}}<br>{col_label}: %{{x}}<br>"
+                       "Contacts: %{customdata[0]:,.0f}<br>"
+                       "Conversions: %{customdata[1]:,.0f}<br>"
+                       "Response rate: %{z:.2f}%<extra></extra>"),
+    ))
+    fig.update_layout(template="plotly_dark", xaxis_title=col_label, yaxis_title=row_label,
+                      yaxis_autorange="reversed")
+    return fig
+
+
+def rank_segments(seg, min_size, overall_rate, row_col, col_col, row_label, col_label):
+    """Top/bottom 10 segments by response rate. Only segments >= min_size are eligible."""
+    eligible = seg[seg["Contacts"] >= min_size].copy()
+    eligible["Lift (x)"] = (eligible["Rate (%)"] / overall_rate).round(2) if overall_rate > 0 else np.nan
+    eligible = eligible.rename(columns={row_col: row_label, col_col: col_label})
+    top = eligible.sort_values(["Rate (%)", "Contacts"], ascending=[False, False]).head(10)
+    bottom = eligible.sort_values(["Rate (%)", "Contacts"], ascending=[True, False]).head(10)
+    return eligible, top, bottom
 
 
 def plot_response_rate(data, group_col, axis_label, overall_rate, success_col, sort_by_rate=True, horizontal=False):
@@ -154,11 +233,12 @@ try:
         )
 
     # 5. Tabbed Layout
-    tab_demo, tab_campaign, tab_response = st.tabs(
+        tab_demo, tab_campaign, tab_response, tab_segments = st.tabs(
         [
             "👥 Demographics & Balances",
             "📞 Campaign Characteristics (EDA)",
             "📊 Response Rates by Customer",
+            "🧩 Customer Segments",
         ]
     )
 
@@ -432,6 +512,61 @@ try:
                 "Hover over a bar to see the number of contacts and conversions behind each rate. "
                 "Groups with very few customers can give unstable rates, so check the Contacts value."
             )
+
+        # ------------------------------------------------------------------
+    # TAB 4: Customer segmentation (two characteristics combined)
+    # ------------------------------------------------------------------
+    with tab_segments:
+        st.markdown(
+            "Combine two characteristics to find **high- and low-response segments**. "
+            "All results respond to the sidebar filters."
+        )
+
+        if total_customers == 0:
+            st.warning("No records match the current filters. Adjust the sidebar filters to see segments.")
+        elif "converted" not in filtered_df.columns:
+            st.info("Outcome column unavailable.")
+        else:
+            labels = list(SEGMENT_DIMENSIONS)
+            c1, c2, c3 = st.columns(3)
+            row_label = c1.selectbox("Row characteristic", labels, index=labels.index("Job"))
+            col_label = c2.selectbox("Column characteristic", labels, index=labels.index("Age group"))
+            min_size = c3.number_input("Minimum segment size (contacts)", min_value=1, value=100, step=10)
+
+            row_col, col_col = SEGMENT_DIMENSIONS[row_label], SEGMENT_DIMENSIONS[col_label]
+
+            if row_label == col_label:
+                st.info("Pick two different characteristics to build the segments.")
+            elif row_col not in filtered_df.columns or col_col not in filtered_df.columns:
+                st.info("A selected characteristic is unavailable in the dataset.")
+            else:
+                overall_rate = filtered_df["converted"].mean() * 100
+                seg = segment_summary(filtered_df, row_col, col_col)
+                rows = category_order(filtered_df, row_col)
+                cols = category_order(filtered_df, col_col)
+
+                fig_seg = build_segment_heatmap(seg, row_col, col_col, rows, cols, min_size, row_label, col_label)
+                st.plotly_chart(fig_seg, use_container_width=True)
+                st.caption(
+                    f"Grey cells have fewer than {min_size:,} contacts and are excluded from the rankings. "
+                    f"Overall response rate for the current filters: {overall_rate:.2f}%."
+                )
+
+                eligible, top, bottom = rank_segments(
+                    seg, min_size, overall_rate, row_col, col_col, row_label, col_label
+                )
+                if eligible.empty:
+                    st.info("No segments meet the minimum size. Lower the minimum segment size.")
+                else:
+                    t_left, t_right = st.columns(2)
+                    with t_left:
+                        st.markdown("**🔝 Top 10 segments**")
+                        st.dataframe(top, use_container_width=True, hide_index=True)
+                    with t_right:
+                        st.markdown("**🔻 Bottom 10 segments**")
+                        st.dataframe(bottom, use_container_width=True, hide_index=True)
+                    if len(eligible) < 20:
+                        st.caption("Fewer than 20 eligible segments, so the two lists may overlap.")
 
     # 6. Data Preview Section
     with st.expander("📂 View Raw Filtered Data Table"):
