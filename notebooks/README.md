@@ -2,7 +2,7 @@
 
 ## Overview
 
-These notebooks support the Banking Marketing Campaign Analytics Dashboard by preparing the banking marketing dataset and exploring customer demographic and behavioral characteristics.
+These notebooks support the Banking Marketing Campaign Analytics Dashboard by exploring the banking marketing dataset and its customer demographic and behavioral characteristics. The dashboard itself prepares its data with `data_prep.py` (see below).
 
 ## Dataset
 
@@ -14,7 +14,7 @@ The analysis uses the training and test datasets supplied by the source.
 
 These notebooks are for **exploration only**.
 
-The dashboard does **not** read any notebook output. It uses [`data_prep.py`](../data_prep.py), which loads the raw `data/train.csv` and cleans it in code each time the app starts (cached by Streamlit). To reproduce the table the dashboard uses:
+The dashboard does **not** read any notebook output. It uses [`data_prep.py`](../data_prep.py), which loads the raw `data/train.csv` and cleans it in code each time the app starts (cached by Streamlit). To reproduce the table the dashboard uses (run from the repository root):
 
 ```python
 import data_prep
@@ -22,6 +22,8 @@ df = data_prep.prepare()
 ```
 
 Cleaned CSVs exported from notebooks are not stored in this repo. If a notebook step matters for the dashboard, it belongs in `data_prep.py` with a test in `tests/`.
+
+The dashboard keeps `unknown` as its label and leaves `pdays = -1` unchanged, adding a separate `previously_contacted` column instead. Its numbers are checked by the tests in `tests/`.
 
 ## Notebooks
 
