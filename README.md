@@ -18,6 +18,7 @@ An interactive analytics dashboard built with **Python, Pandas, Plotly, and Stre
 - [Key Performance Indicators](#-key-performance-indicators)
 - [Exploratory Data Analysis](#-exploratory-data-analysis)
 - [Getting Started](#-getting-started)
+- [Running tests](#-running-tests)
 - [Project Structure](#-project-structure)
 - [Project Standards](#-project-standards)
 - [Contributing](#-contributing)
@@ -40,7 +41,7 @@ This project helps marketing stakeholders answer practical questions about a ban
 
 | Feature | Description |
 |---|---|
-| **Dataset integration** | Automatically loads and parses the UCI Bank Marketing dataset (`data/train.csv`) using semicolon delimiters (`sep=";"`). |
+| **Dataset integration** | Loads the raw UCI Bank Marketing dataset (`data/train.csv`, semicolon-separated) and cleans it in code with `data_prep.py` at load time (cached). No cleaned CSV is stored in the repo. |
 | **5 dynamic filters** | Sidebar filters for **Occupation/Job**, **Age Group** (auto-binned from raw age), **Education Level**, **Contact Method**, and **Previous Outcome**. |
 | **Live KPI cards** | Filtered Customer Count, Average Account Balance ($), and Campaign Conversion Rate (%). |
 | **Interactive visualizations** | Three tabs: demographics and balances, campaign characteristics (EDA), and response rates by customer characteristics. |
@@ -134,12 +135,29 @@ Then open the local URL shown in your terminal (usually `http://localhost:8501`)
 
 ---
 
+## 🧪 Running tests
+
+The tests check the data preparation steps and confirm that the dashboard numbers are correct (45,211 customers, 11.70% conversion, $1,362.27 average balance, a filtered case and three segment spot checks).
+
+```bash
+# From the repository root
+pip install -r requirements-dev.txt
+pytest
+```
+
+The tests read `data/train.csv`, so run them from the repository root.
+
+---
+
 ## 🗂 Project Structure
 
 ```
 banking-marketing-campaign-analytics/
 ├── app.py                  # Streamlit dashboard
+├── data_prep.py            # Loads, cleans and validates the raw data
 ├── requirements.txt        # Python dependencies
+├── requirements-dev.txt    # Test dependencies (pytest)
+├── pytest.ini              # pytest settings
 ├── README.md
 ├── LICENSE
 ├── CONTRIBUTING.md
@@ -149,10 +167,11 @@ banking-marketing-campaign-analytics/
 ├── data/
 │   ├── train.csv           # UCI Bank Marketing dataset (used by the app)
 │   └── test.csv
+├── tests/                  # pytest tests for data prep and dashboard numbers
 ├── docs/
 │   ├── task-summaries/     # One summary per completed task
 │   └── screenshots/        # Dashboard screenshots
-└── notebooks/              # Optional exploratory notebooks
+└── notebooks/              # Exploratory notebooks (the app uses data_prep.py)
 ```
 
 ---

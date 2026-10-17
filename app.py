@@ -4,6 +4,8 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
+import data_prep
+
 # 1. Page Configuration (Wide Layout)
 st.set_page_config(
     page_title="Bank Marketing Campaign Dashboard",
@@ -28,15 +30,8 @@ PLOT_TEMPLATE = "plotly_dark"
 # 2. Load Dataset
 @st.cache_data
 def load_banking_data():
-    df = pd.read_csv("data/train.csv", sep=";")
-
-    # Preprocess Age into Age Groups to satisfy age filtering requirements
-    if "age" in df.columns:
-        bins = [0, 25, 35, 50, 65, 120]
-        labels = ["<25", "25-34", "35-49", "50-64", "65+"]
-        df["age_group"] = pd.cut(df["age"], bins=bins, labels=labels, right=False)
-
-    return df
+    """Load, clean and validate the data (see data_prep.py). Cached after the first run."""
+    return data_prep.prepare()
 
 
 def summarize_by(data, group_col, success_col):
