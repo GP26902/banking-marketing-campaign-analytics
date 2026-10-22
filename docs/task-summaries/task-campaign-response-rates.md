@@ -20,11 +20,12 @@ Cellular has the highest observed rate, 1.50 percentage points above telephone. 
 | --- | ---: | ---: | ---: |
 | 1 | 17,544 | 2,561 | 14.60% |
 | 2 | 12,505 | 1,401 | 11.20% |
-| 3–4 | 9,043 | 935 | 10.34% |
-| 5–9 | 4,657 | 331 | 7.11% |
-| 10+ | 1,462 | 61 | 4.17% |
+| 3 | 5,521 | 618 | 11.19% |
+| 4 | 3,522 | 317 | 9.00% |
+| 5-10 | 4,923 | 345 | 7.01% |
+| 11+ | 1,196 | 47 | 3.93% |
 
-The observed response rate declines across these groups, from 14.60% for one contact to 4.17% for ten or more, a 10.43 percentage-point difference. This pattern does not establish that extra calls cause lower response: harder-to-convert customers may receive more calls.
+The observed response rate declines across these groups, from 14.60% for one contact to 3.93% for 11 or more, a 10.67 percentage-point drop. This pattern does not establish that extra calls cause lower response: harder-to-convert customers may receive more calls.
 
 ## Previous campaign outcome
 
@@ -51,8 +52,8 @@ import pandas as pd
 df = pd.read_csv('data/train.csv', sep=';')
 df['positive'] = df['y'].eq('yes').astype(int)
 df['contact_attempts'] = pd.cut(
-    df['campaign'], [0, 1, 2, 4, 9, float('inf')],
-    labels=['1', '2', '3–4', '5–9', '10+']
+    df['campaign'], bins=[0, 1, 2, 3, 4, 10, float('inf')],
+    labels=['1', '2', '3', '4', '5-10', '11+']
 )
 for characteristic in ['contact', 'contact_attempts', 'poutcome']:
     result = df.groupby(characteristic, observed=True)['positive'].agg(
