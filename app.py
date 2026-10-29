@@ -3,6 +3,9 @@ import plotly.express as px
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from seasonality import monthly_summary
 
 import data_prep
 
@@ -238,26 +241,171 @@ try:
     )
 
     # ------------------------------------------------------------------
-    # TAB 1: Existing visualizations (unchanged)
+    # TAB 1: Demographics, balances, seasonality and loan / default fields
     # ------------------------------------------------------------------
     with tab_demo:
-        col_left, col_right = st.columns(2)
+        if total_customers == 0:
+            st.warning("No records match the current filters. Adjust the sidebar filters to see the charts.")
+        else:
+            col_left, col_right = st.columns(2)
 
-        with col_left:
-            st.subheader("💰 Average Account Balance by Job")
-            if "job" in filtered_df.columns and "balance" in filtered_df.columns:
-                chart_data_balance = filtered_df.groupby("job")["balance"].mean().sort_values(ascending=False)
-                st.bar_chart(chart_data_balance)
-            else:
-                st.info("Required data columns for balance breakdown unavailable.")
+            # Chart 1: average balance by job
+            with col_left:
+                st.subheader("💰 Average Account Balance by Job")
+                if "job" in filtered_df.columns and "balance" in filtered_df.columns:
+                    balance_by_job = (
+                        filtered_df.groupby("job")
+                        .agg(**{"Average Balance ($)": ("balance", "mean"), "Contacts": ("balance", "size")})
+                        .reset_index()
+                        .sort_values("Average Balance ($)", ascending=False)
+                    )
+                    balance_by_job["Average Balance ($)"] = balance_by_job["Average Balance ($)"].round(2)
+                    fig_balance = px.bar(
+                        balance_by_job,
+                        x="job",
+                        y="Average Balance ($)",
+                        color="job",
+                        text="Average Balance ($)",
+                        hover_data=["Contacts"],
+                        template=PLOT_TEMPLATE,
+                    )
+                    fig_balance.update_traces(texttemplate="$%{text:,.0f}", textposition="outside", cliponaxis=False)
+                    fig_balance.update_layout(
+                        showlegend=False, xaxis_title="Occupation", yaxis_title="Average Account Balance ($)"
+                    )
+                    st.plotly_chart(fig_balance, use_container_width=True)
+                else:
+                    st.info("Required data columns for balance breakdown unavailable.")
 
-        with col_right:
-            st.subheader("🎯 Campaign Outcomes Distribution")
-            if success_col and "job" in filtered_df.columns:
-                outcome_data = pd.crosstab(filtered_df["job"], filtered_df[success_col])
-                st.bar_chart(outcome_data)
+            # Chart 2: subscribed vs not subscribed by job
+            with col_right:
+                st.subheader("🎯 Campaign Outcomes Distribution")
+                if success_col and "job" in filtered_df.columns:
+                    outcome_counts = (
+                        filtered_df.groupby(["job", success_col]).size().reset_index(name="Customers")
+                    )
+                    job_order = (
+                        filtered_df["job"].value_counts().index.tolist()
+                    )
+                    fig_outcomes = px.bar(
+                        outcome_counts,
+                        x="job",
+                        y="Customers",
+                        color=success_col,
+                        barmode="stack",
+                        category_orders={"job": job_order},
+                        labels={success_col: "Subscribed"},
+                        template=PLOT_TEMPLATE,
+                    )
+                    fig_outcomes.update_layout(xaxis_title="Occupation", yaxis_title="Number of Customers")
+                    st.plotly_chart(fig_outcomes, use_container_width=True)
+                else:
+                    st.info("Outcome column breakdown unavailable.")
+
+            st.divider()
+
+            # Chart 3: seasonality (conversion rate by month, contacts as bars)
+            st.subheader("📅 Seasonality: Conversion Rate by Month")
+            if "month" in filtered_df.columns and "converted" in filtered_df.columns:
+                month_summary = monthly_summary(filtered_df)
+                fig_month = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_month.add_trace(
+                    go.Bar(
+                        x=month_summary["Month"],
+                        y=month_summary["Contacts"],
+                        name="Contacts",
+                        opacity=0.6,
+                        hovertemplate="%{x}<br>Contacts: %{y:,}<extra></extra>",
+                    ),
+                    secondary_y=False,
+                )
+                fig_month.add_trace(
+                    go.Scatter(
+                        x=month_summary["Month"],
+                        y=month_summary["Conversion Rate (%)"],
+                        name="Conversion rate (%)",
+                        mode="lines+markers",
+                        customdata=month_summary[["Conversions"]],
+                        hovertemplate=(
+                            "%{x}<br>Conversion rate: %{y:.2f}%"
+                            "<br>Conversions: %{customdata[0]:,}<extra></extra>"
+                        ),
+                    ),
+                    secondary_y=True,
+                )
+                fig_month.update_layout(
+                    template=PLOT_TEMPLATE,
+                    xaxis_title="Month",
+                    legend=dict(orientation="h", y=1.12),
+                )
+                fig_month.update_xaxes(categoryorder="array", categoryarray=month_summary["Month"].tolist())
+                fig_month.update_yaxes(title_text="Contacts", secondary_y=False)
+                fig_month.update_yaxes(title_text="Conversion rate (%)", rangemode="tozero", secondary_y=True)
+                st.plotly_chart(fig_month, use_container_width=True)
+                st.caption(
+                    "Bars show how many customers were contacted each month; the line shows the share who subscribed. "
+                    "Months with few contacts can give unstable rates, so check the bar height before reading the line."
+                )
+                with st.expander("View month table"):
+                    st.dataframe(
+                        month_summary[["Month", "Contacts", "Conversions", "Conversion Rate (%)"]],
+                        use_container_width=True,
+                        hide_index=True,
+                    )
             else:
-                st.info("Outcome column breakdown unavailable.")
+                st.info("Month or outcome column unavailable.")
+
+            st.divider()
+
+            # Chart 4: age / balance histogram, subscribed vs not
+            st.subheader("📊 Age & Balance Distribution by Subscription")
+            hist_choice = st.radio("Field", ["Age", "Account balance"], horizontal=True)
+            hist_col = "age" if hist_choice == "Age" else "balance"
+            if hist_col in filtered_df.columns and success_col:
+                hist_df = filtered_df
+                if hist_col == "balance":
+                    # A few very large balances stretch the axis, so show the middle 98%
+                    low, high = filtered_df["balance"].quantile([0.01, 0.99])
+                    hist_df = filtered_df[filtered_df["balance"].between(low, high)]
+                fig_hist = px.histogram(
+                    hist_df,
+                    x=hist_col,
+                    color=success_col,
+                    barmode="overlay",
+                    opacity=0.65,
+                    nbins=40,
+                    histnorm="percent",
+                    labels={hist_col: hist_choice, success_col: "Subscribed"},
+                    template=PLOT_TEMPLATE,
+                )
+                fig_hist.update_layout(xaxis_title=hist_choice, yaxis_title="% of customers in group")
+                st.plotly_chart(fig_hist, use_container_width=True)
+                caption = (
+                    "Each group (subscribed / not subscribed) is scaled to 100% on its own, because far fewer "
+                    "customers subscribed. Bars show the share within the group, not raw counts."
+                )
+                if hist_col == "balance":
+                    caption += " The lowest 1% and highest 1% of balances are left out so the chart stays readable."
+                st.caption(caption)
+            else:
+                st.info("Selected field or outcome column unavailable.")
+
+            st.divider()
+
+            # Rate tables: housing loan, personal loan, credit default
+            st.subheader("🏦 Loans & Credit Default")
+            risk_fields = [("Housing loan", "housing"), ("Personal loan", "loan"), ("Credit default", "default")]
+            risk_cols = st.columns(3)
+            for risk_col, (title, field) in zip(risk_cols, risk_fields):
+                with risk_col:
+                    st.markdown(f"**{title}**")
+                    if field in filtered_df.columns and success_col:
+                        st.dataframe(
+                            summarize_by(filtered_df, field, success_col).rename_axis(title),
+                            use_container_width=True,
+                        )
+                    else:
+                        st.info(f"'{field}' column unavailable.")
 
     # ------------------------------------------------------------------
     # TAB 2: Exploratory Data Analysis on campaign characteristics
