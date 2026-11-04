@@ -17,6 +17,7 @@ An interactive analytics dashboard built with **Python, Pandas, Plotly, and Stre
 - [Features](#-features)
 - [Key Performance Indicators](#-key-performance-indicators)
 - [Exploratory Data Analysis](#-exploratory-data-analysis)
+- [Findings Report](#-findings-report)
 - [Getting Started](#-getting-started)
 - [Running tests](#-running-tests)
 - [Project Structure](#-project-structure)
@@ -102,6 +103,12 @@ The **📊 Response Rates by Customer** tab shows response rates by age group, o
 - **Highest-response groups:** customers aged 65+ (42.10%), students (28.68%) and retirees (22.79%), compared with an overall rate of 11.70%.
 - **Lowest-response groups:** ages 35-49 (9.62%) and blue-collar workers (7.27%).
 - **Caution:** the highest-response age groups have only about 800 customers each, so treat their rates with care.
+
+---
+
+## 📄 Findings Report
+
+A plain-language summary of the data, methods, KPI definitions and key findings is in [docs/findings-report.md](docs/findings-report.md).
 
 ---
 
