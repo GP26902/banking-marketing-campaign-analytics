@@ -185,6 +185,21 @@ banking-marketing-campaign-analytics/
 
 ---
 
+## 🌐 Deployment
+
+The dashboard is deployed on [Streamlit Community Cloud](https://share.streamlit.io) from the `main` branch.
+
+1. Merge your changes into `main`.
+2. Sign in at share.streamlit.io with GitHub and click **Create app**.
+3. Select this repository, branch `main`, and main file `app.py`.
+4. In **Advanced settings**, choose Python 3.12 (the version the dependencies were tested on).
+5. Click **Deploy**. Dependencies install from `requirements.txt`.
+6. In the app's settings, set sharing to public so no login is needed.
+
+Any later push to `main` redeploys the app automatically. Free apps go to sleep after a period without traffic, and opening the URL wakes them.
+
+---
+
 ## ✅ Project Standards
 
 - **Performance:** optimized for load times under 5 seconds.
