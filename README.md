@@ -4,7 +4,7 @@ Analytics and decision-support dashboard for evaluating banking marketing campai
 
 An interactive analytics dashboard built with **Python, Pandas, Plotly, and Streamlit** that turns the public UCI Bank Marketing dataset into an easy-to-explore tool for understanding campaign performance, customer demographics, and the key drivers of term-deposit conversion.
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-150458?logo=pandas&logoColor=white)
 ![Plotly](https://img.shields.io/badge/Plotly-Visualization-3F4F75?logo=plotly&logoColor=white)
@@ -116,7 +116,7 @@ A plain-language summary of the data, methods, KPI definitions and key findings 
 
 ### Prerequisites
 
-- Python 3.9 or later
+- Python 3.12 (tested)
 - `pip`
 
 ### Installation
@@ -162,6 +162,7 @@ The tests read `data/train.csv`, so run them from the repository root.
 banking-marketing-campaign-analytics/
 ├── app.py                  # Streamlit dashboard
 ├── data_prep.py            # Loads, cleans and validates the raw data
+├── seasonality.py          # Monthly seasonality calculations
 ├── requirements.txt        # Python dependencies
 ├── requirements-dev.txt    # Test dependencies (pytest)
 ├── pytest.ini              # pytest settings
@@ -176,10 +177,26 @@ banking-marketing-campaign-analytics/
 │   └── test.csv
 ├── tests/                  # pytest tests for data prep and dashboard numbers
 ├── docs/
+│   ├── findings-report.md  # Findings and methodology report
 │   ├── task-summaries/     # One summary per completed task
 │   └── screenshots/        # Dashboard screenshots
 └── notebooks/              # Exploratory notebooks (the app uses data_prep.py)
 ```
+
+---
+
+## 🌐 Deployment
+
+The dashboard is deployed on [Streamlit Community Cloud](https://share.streamlit.io) from the `main` branch.
+
+1. Merge your changes into `main`.
+2. Sign in at share.streamlit.io with GitHub and click **Create app**.
+3. Select this repository, branch `main`, and main file `app.py`.
+4. In **Advanced settings**, choose Python 3.12 (the version the dependencies were tested on).
+5. Click **Deploy**. Dependencies install from `requirements.txt`.
+6. In the app's settings, set sharing to public so no login is needed.
+
+Any later push to `main` redeploys the app automatically. Free apps go to sleep after a period without traffic, and opening the URL wakes them.
 
 ---
 

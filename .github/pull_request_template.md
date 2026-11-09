@@ -10,6 +10,7 @@
 ## Checklist
 - [ ] Branch is named `yourname/task-name` and was created from an up-to-date `main`
 - [ ] App runs locally at `http://localhost:8501` with no errors
+- [ ] Tests pass (`pytest`)
 - [ ] `README.md` updated if needed
 - [ ] Task summary added in `docs/task-summaries/`
 - [ ] Screenshots added in `docs/screenshots/` (if the UI changed)
